@@ -32,14 +32,15 @@ The last step is to create the partial view that will render your slider field f
 Create the partial view in the folder where your form template looks for field partials. See the [rendering section](render.md) for details.
 
 The following example illustrates of how the partial view could be implemented (of course the actual implementation is entirely up to you):
+
 ```xml
 @inherits Umbraco.Web.Mvc.UmbracoViewPage<FormEditor.Fields.CustomField>
 <div class="form-group @(Model.Invalid ? "has-error" : null)">
   <label for="@Model.FormSafeName">@Model.Label</label>
   <input type="range" id="@Model.FormSafeName" name="@Model.FormSafeName" value="@Model.SubmittedValue" min="0" max="100" step="10" @(Model.Mandatory ? "required" : null) />
 
-  @Html.Partial("FormEditor/Postback/core.utils.helptext")
-  @Html.Partial("FormEditor/Postback/core.utils.validationerror")
+  @Html.Partial("FormEditor/FieldsSync/core.utils.helptext")
+  @Html.Partial("FormEditor/FieldsSync/core.utils.validationerror")
 </div>
 ```
 
@@ -52,3 +53,37 @@ A few things are worth pointing out in the field partial above:
     1. The form was submitted, but was found to be invalid by the server side validation, and thus the form was re-rendered.
     2. The form was submitted, but no success page was configured for redirection upon successful form submission, and thus the form was re-rendered.
 * The two partial views `core.utils.helptext` and `core.utils.validationerror` are generic helpers for rendering the field help text and validation error (if the field value is invalid). Use them or don't, that's entirely up to you.
+
+## Fields with fixed values
+If you want the editors to be able to enter a range of fixed values when configuring the your custom field (like a select box), set `fixedValues` to `true` in */Config/FormEditor.config*:
+
+```xml
+<FormEditor>
+  <CustomFields>
+    <Field type="my.options" name="Options" fixedValues="true" />
+  </CustomFields>
+  <!-- ... -->
+</FormEditor>
+```
+
+Form Editor will then add the fixed field values configuration to the field configuration window in Umbraco. 
+
+When you render your field, you need to use `FormEditor.Fields.CustomFieldFixedValues` instead of `FormEditor.Fields.CustomField`. The fixed field values will be available in `Model.FieldValues`:
+
+```xml
+@inherits Umbraco.Web.Mvc.UmbracoViewPage<FormEditor.Fields.CustomFieldFixedValues>
+<div class="form-group @(Model.Mandatory ? "required" : null) @(Model.Invalid ? "has-error" : null)">
+  <label for="@Model.FormSafeName">@Model.Label</label>
+  <select class="form-control" id="@Model.FormSafeName" name="@Model.FormSafeName" @(Model.Mandatory ? "required" : null)>
+    @foreach (var fieldValue in Model.FieldValues)
+    {
+      <option value="@fieldValue.Value" @(fieldValue.Selected ? "selected" : "")>@fieldValue.Value</option>
+    }
+  </select>
+
+  @Html.Partial("FormEditor/FieldsSync/core.utils.helptext")
+  @Html.Partial("FormEditor/FieldsSync/core.utils.validationerror")
+</div>
+```
+
+Any values submitted by the end users to this field will be validated server side against the configured range of values. And as an added bonus, the field will automatically support field value statistics.

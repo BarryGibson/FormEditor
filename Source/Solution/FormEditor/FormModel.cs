@@ -54,7 +54,7 @@ namespace FormEditor
 		}
 
 		public IEnumerable<Validation.Validation> Validations { get; set; }
-		public Guid RowId { get; set; } = Guid.Empty;
+		public Guid RowId { get; set; }
 		public string EmailNotificationRecipients { get; set; }
 		public string EmailNotificationSubject { get; set; }
 		public string EmailNotificationFromAddress { get; set; }
@@ -168,16 +168,9 @@ namespace FormEditor
 				};
 				return false;
 			}
+
 			// before add to index event handling did not cancel - add to index
-			var rowId = Guid.Empty;
-			if (RowId==Guid.Empty)
-			{
-				rowId = AddSubmittedValuesToIndex(content, valueFields);
-			}
-			else
-			{
-				rowId = UpdateSubmittedValuesToIndex(content, valueFields, RowId);
-			}
+			var rowId = AddSubmittedValuesToIndex(content, valueFields);
 			if(rowId == Guid.Empty)
 			{
 				return false;
@@ -236,11 +229,28 @@ namespace FormEditor
 
 		public void LoadValues(IPublishedContent content, Guid rowId)
 		{
-			//get fields from Database if they exist
-			var fields = CollectSubmittedValuesFromDatabase(content,rowId);
-			//Using ValidateSubmittedValue to load up select boxes
+			if (rowId == Guid.Empty)
+			{
+				return;
+			}
+			var index = IndexHelper.GetIndex(content.Id);
+			var formData = index.Get(rowId);
+
+			if (formData == null)
+			{
+				return;
+			}
+
+			RowId = rowId;
+
+			var fields = AllFields().ToArray();
 			foreach (var field in fields)
 			{
+				field.CollectSubmittedValue(formData.Fields, content);
+			}
+			foreach (var field in fields)
+			{
+				// using ValidateSubmittedValue to load up select boxes
 				field.ValidateSubmittedValue(fields, content);
 			}
 		}
@@ -393,34 +403,6 @@ namespace FormEditor
 
 		#region Collect submitted values
 
-		private List<Field> CollectSubmittedValuesFromDatabase(IPublishedContent content,Guid rowId)
-		{
-			var fields = AllFields().ToList();
-
-			if (rowId != Guid.Empty)
-			{
-				RowId = rowId;
-				var index = IndexHelper.GetIndex(content.Id);
-				var row2 = index.Get(RowId);
-				var result = new Result(1, Enumerable.Repeat(row2, 1), "", true);
-				var fieldsWithValues = AllValueFields();
-				var rows = ExtractSubmittedValues(result, fieldsWithValues, (field, value, myRow) => value == null ? null : value);// field.FormatValueForFrontend(value, content, myRow.Id));
-				var row = rows.FirstOrDefault();
-				if (row != null)
-				{
-					var allSubmittedValues = row.Fields.ToDictionary(f => f.FormSafeName, f => f.Value);
-					foreach (var field in fields)
-					{
-						field.CollectSubmittedValue(allSubmittedValues, content);
-						//field.
-					}
-				}
-
-			}
-			return fields;
-
-		}
-
 		private List<Field> CollectSubmittedValuesFromRequest(IPublishedContent content)
 		{
 			var valueCollection = Request.Form;
@@ -475,10 +457,30 @@ namespace FormEditor
 
 		private Guid AddSubmittedValuesToIndex(IPublishedContent content, IEnumerable<FieldWithValue> valueFields)
 		{
-			var rowId = Guid.NewGuid();
+			// we're performing an update if RowId as a value
+			var isUpdate = RowId != Guid.Empty;
+			// generate a new row ID for the index only if we're not performing an update, otherwise reuse RowId
+			var indexRowId = isUpdate ? RowId : Guid.NewGuid();
+
+			// get the storage index
+			var index = IndexHelper.GetIndex(content.Id);
+			// - attempt to cast to IStatisticsIndex if statistics are enabled
+			var statisticsIndex = UseStatistics ? index as IStatisticsIndex : null;
+			// - attempt to cast to IUpdateIndex if we're performing an update 
+			//   (this will change in an upcoming release when IUpdateIndex is merged into IIndex)
+			var updateIndex = isUpdate ? index as IUpdateIndex : null;
+
+			if (isUpdate)
+			{
+				// can we perform the update? only IStatisticsIndex and IUpdateIndex support updates
+				if (statisticsIndex == null && updateIndex == null)
+				{
+					return Guid.Empty;
+				}
+			}
 
 			// extract all index values
-			var indexFields = valueFields.ToDictionary(f => f.FormSafeName, f => FormatForIndexAndSanitize(f, content, rowId));
+			var indexFields = valueFields.ToDictionary(f => f.FormSafeName, f => FormatForIndexAndSanitize(f, content, indexRowId));
 
 			// add the IP of the user if enabled on the data type
 			if(LogIp)
@@ -486,53 +488,21 @@ namespace FormEditor
 				indexFields.Add("_ip", Request.UserHostAddress);
 			}
 
-			// store fields in index
-			var index = IndexHelper.GetIndex(content.Id);
-			var statisticsIndex = index as IStatisticsIndex;
-
-			if (UseStatistics && statisticsIndex != null)
+			if (statisticsIndex != null)
 			{
 				var indexFieldsForStatistics = valueFields.StatisticsFields().ToDictionary(f => f.FormSafeName, f => f.SubmittedValues ?? new string[] {});
-				statisticsIndex.Add(indexFields, indexFieldsForStatistics, rowId);
+				return isUpdate
+					? statisticsIndex.Update(indexFields, indexFieldsForStatistics, indexRowId)
+					: statisticsIndex.Add(indexFields, indexFieldsForStatistics, indexRowId);
 			}
-			else
+			if (updateIndex != null)
 			{
-				index.Add(indexFields, rowId);				
+				return updateIndex.Update(indexFields, indexRowId);
 			}
 
-			return rowId;
+			return index.Add(indexFields, indexRowId);			
 		}
-		private Guid UpdateSubmittedValuesToIndex(IPublishedContent content, IEnumerable<FieldWithValue> valueFields,Guid rowId)
-		{
-			//var rowId = Guid.NewGuid();
-
-			// extract all index values
-			var indexFields = valueFields.ToDictionary(f => f.FormSafeName, f => FormatForIndexAndSanitize(f, content, rowId));
-
-			// add the IP of the user if enabled on the data type
-			if (LogIp)
-			{
-				indexFields.Add("_ip", Request.UserHostAddress);
-			}
-
-			// store fields in index
-			var index = UpdateIndexHelper.GetIndex(content.Id);
-			//TODO: Support for Statistics
-			//var statisticsIndex = index as IStatisticsIndex;
-
-			//if (UseStatistics && statisticsIndex != null)
-			//{
-			//	var indexFieldsForStatistics = valueFields.StatisticsFields().ToDictionary(f => f.FormSafeName, f => f.SubmittedValues ?? new string[] { });
-			//	statisticsIndex.Add(indexFields, indexFieldsForStatistics, rowId);
-			//}
-			//else
-			//{
-			index.Update(indexFields, rowId);
-			//}
-
-			return rowId;
-		}
-
+		
 		private string FormatForIndexAndSanitize(FieldWithValue field, IPublishedContent content, Guid rowId)
 		{
 			var value = field.FormatSubmittedValueForIndex(content, rowId);

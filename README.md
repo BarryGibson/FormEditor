@@ -25,13 +25,17 @@ Some highlights include:
 * [Reusable forms](Docs/reuse.md)
 * [Multiple forms per page](Docs/multiple.md)
 * [Working with the form submissions](Docs/submissions.md)
-* [Creating custom fields and more](Docs/extend.md)
+* [Extending Form Editor (custom fields, workflows and more)](Docs/extend.md)
+* [Creating a default form](Docs/initialize.md)
 * [A note about storage](Docs/storage.md)
 * [Building and contributing](Docs/build.md)
 
 ## Tutorials
 * [Hello Form Editor](Tutorials/HelloFormEditor.md) - add Form Editor to the Fanoe starter kit in just 15 minutes.
 * [Creating a poll with Form Editor](Tutorials/Poll.md) - use Form Editor to create polls within the Fanoe starter kit.
+    * Topics covered: Forms within the grid, form submission statistics, asynchronous form postback, multiple forms per page.
+* [User ratings with Form Editor](Tutorials/Ratings.md) - build an article rating system with Form Editor.
+    * Topics covered: Form submission rendering and statistics, customized field rendering.
 
 ## Credits
 A huge thank-you goes out to the talented [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/) for creating the Fugue Icons that are used heavily in this project. H5YR!
