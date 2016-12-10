@@ -1,15 +1,29 @@
 # Rendering the form
-To make sure you hit the ground running, Form Editor ships with premade partial views for [synchronous form postback](../Source/Umbraco/Views/Partials/FormEditor/Sync.cshtml) (using [jQuery](https://jquery.com/)) and [asynchronous form postback](../Source/Umbraco/Views/Partials/FormEditor/Async.cshtml) (using [AngularJS](https://angularjs.org/)). Once the package is installed, these partial views can be found at */Views/Partials/FormEditor/*. 
+To make sure you hit the ground running, Form Editor ships with premade partial views for:
 
-The package also installs two sample templates that demonstrate how to use the partial views - one that demonstrates [synchronous form postback](../Source/Umbraco/Views/FormEditorSync.cshtml) and one that demonstrates [asynchronous form postback](../Source/Umbraco/Views/FormEditorAsync.cshtml).
+- [Synchronous form postback](../Source/Umbraco/Views/Partials/FormEditor/Sync.cshtml) using [jQuery](https://jquery.com/) to handle validation and submission.
+- [Asynchronous form postback](../Source/Umbraco/Views/Partials/FormEditor/Async.cshtml) using [AngularJS](https://angularjs.org/) to handle validation and submission. 
+- [Synchronous form postback](../Source/Umbraco/Views/Partials/FormEditor/NoScript.cshtml) without external script dependencies, using HTML5 to handle validation.
+
+Once the package is installed, these partial views can be found at */Views/Partials/FormEditor/*. 
+
+The package also installs sample templates that demonstrate how to use the partial views:
+
+- [Synchronous form postback](../Source/Umbraco/Views/FormEditorSync.cshtml) using jQuery.
+- [Asynchronous form postback](../Source/Umbraco/Views/FormEditorAsync.cshtml) using AngularJS.
+- [Synchronous form postback](../Source/Umbraco/Views/FormEditorNoScript.cshtml) without external script dependencies.
 
 ## 1-2-3-done!
-By completing these three steps, you'll have your first form rendered in no time:
+By completing these steps you'll have your first form rendered in no time:
 
 1. Render the applicable partial view in your template: 
-    * Use ```@Html.Partial("FormEditor/Sync", Umbraco.AssignedContentItem)``` for synchronous form postback.
+    * Use ```@Html.Partial("FormEditor/Sync", Umbraco.AssignedContentItem)``` for synchronous form postback using jQuery.
     * Use  ```@Html.Partial("FormEditor/Async", Umbraco.AssignedContentItem)``` for asynchronous form postback.
-2. Make sure you have included either [jQuery](https://jquery.com/) or [AngularJS](https://angularjs.org/) in your template (even if you're using synchronous form postback, you'll still want scripting support for client side validation).
+    * Use  ```@Html.Partial("FormEditor/NoScript", Umbraco.AssignedContentItem)``` for synchronous form postback without external script dependencies.
+
+If you're using the *NoScript* rendering you don't need to do anything else. Otherwise:
+
+2. Make sure you have included either [jQuery](https://jquery.com/) or [AngularJS](https://angularjs.org/) in your template.
 3. Include the applicable Form Editor script for handling validation and form submission:
     * Use ```/JS/FormEditor/FormEditorSync.js``` for synchronous form postback.
     * Use ```/JS/FormEditor/FormEditorAsync.js``` for asynchronous form postback.
@@ -20,6 +34,50 @@ Have a look at the sample templates to see actual implementations of this.
 
 **Note:** If you have named your Form Editor property something else than "form" (see [Installing and setting up Form Editor](install.md)), you can specify the property name like this: ```ViewBag.FormName = "myForm";```
 
+### Performing asynchronous postback with the *NoScript* rendering
+If you want to do asynchronous postback with the *NoScript* rendering, you can post the form data to the Form Editor endpoint at */umbraco/FormEditorApi/Public/SubmitEntry/*. This could be done using the `XMLHttpRequest` - something like this:
+
+```js
+document.addEventListener("DOMContentLoaded",
+    function () {
+        if (!document.forms.length) {
+            return;
+        }
+        // add a submit event listener to the first form on the page (you might need to be smarter about this)
+        document.forms[0].addEventListener("submit",
+            function (e) {
+                e.preventDefault();
+
+                var data = new FormData(e.target);
+                var request = new XMLHttpRequest();
+
+                request.onreadystatechange = function () {
+                    if (request.readyState === 4 && request.status === 200) {
+                        var response = JSON.parse(request.responseText);
+                        // is the form set up with a redirect to a thank-you page?
+                        if (response.redirectUrlWithDomain) {
+                            window.location = response.redirectUrlWithDomain;
+                        } else {
+                            // nope, do your thing - show a thank-you message or whatnot
+                            alert("Thank you!");
+                        }
+                    }
+                }
+
+                request.open("POST", "/umbraco/FormEditorApi/Public/SubmitEntry/", true);
+                request.send(data);
+            });
+    });
+```
+
+### Limitations in the *NoScript* rendering
+The *NoScript* rendering provides client side validation solely by means of HTML5 validation and a bit of inline scripting to ensure that the correct error messages are shown for invalid fields. This means that the client side validation lacks support for a few things, namely:
+
+- Cross field validation
+- Required validation for *Checkbox group* fields
+
+Of course the server side validation still works for all of the above, regardless of your choice of rendering. However, you still might want to consider [disabling the validation tab](install.md#tab-order-and-availiability) and [omitting the *Checkbox group* field type](install.md#field-type-groups) if you're using *NoScript*.
+
 ## Creating your own rendering
 If you want to create your own renderings, the sample templates and partial views should always be your starting point for inspiration. They are fairly well documented and will not be discussed in detail here. However, a few things are worth mentioning.
 
@@ -27,8 +85,9 @@ If you want to create your own renderings, the sample templates and partial view
 As mentioned in the [setup guide](install.md), the rows and cells have aliases to help you recognize them when rendering the form. 
 
 As for field rendering, Form Editor uses partial views to render all form fields. The partial views are referenced by convention based on the field `Type` name, and are expected to be located at:
-* */Views/Partials/FormEditor/FieldsSync/* for synchronous form postback 
+* */Views/Partials/FormEditor/FieldsSync/* for synchronous form postback using jQuery
 * */Views/Partials/FormEditor/FieldsAsync/* for asynchronous postback 
+* */Views/Partials/FormEditor/FieldsNoScript/* for synchronous form postback without external script dependencies
 
 The following code sample shows how this could all be pieced together: 
 
@@ -73,6 +132,28 @@ var form = Model.Content.GetPropertyValue<FormModel>("form");
 form.CollectSubmittedValues();
 ```
 
+If you need to work with the submitted values after the postback, you can retrieve the ID of the submission from the `RowId` property on the form model:
+
+```cs
+// get the form model (named "form" on the content type)
+var form = Model.Content.GetPropertyValue<FormModel>("form");
+// collect submitted values but do not redirect
+if (form.CollectSubmittedValues(redirect: false))
+{
+  // get the ID of the submission
+  var id = form.RowId;
+  // do something with the ID - for example redirect to the recipt page with the ID in the query string
+  if (form.SuccessPageId > 0)
+  {
+    var successPage = Umbraco.TypedContent(form.SuccessPageId);
+    if (successPage != null)
+    {
+      HttpContext.Current.Response.Redirect(successPage.Url + "?id=" + id);
+    }
+  }
+}
+```
+
 ### Submitting form data using asynchronous postback
 When using asynchronous postback for form submission you'll need to create a `FormData` object, populate it with the form data you want to submit and POST it to the Form Editor `SubmitEntry` endpoint at */umbraco/FormEditorApi/Public/SubmitEntry/* - like this: 
 
@@ -86,6 +167,8 @@ $http.post("/umbraco/FormEditorApi/Public/SubmitEntry/", data, { headers: { "Con
 ```
 
 Please remember the `"Content-Type": undefined` header, otherwise stuff won't work.
+
+The response from the endpoint contains the receipt page URL (if a receipt page is configured) and the ID of the submission.
 
 ## Next step
 Onwards to [Email templates](emails.md).

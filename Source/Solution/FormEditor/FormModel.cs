@@ -11,6 +11,7 @@ using FormEditor.Data;
 using FormEditor.Events;
 using FormEditor.Fields;
 using FormEditor.Fields.Statistics;
+using FormEditor.Limitations;
 using FormEditor.Storage;
 using FormEditor.Storage.Statistics;
 using Umbraco.Core.Models;
@@ -23,10 +24,9 @@ namespace FormEditor
 	{
 		public const string PropertyEditorAlias = @"FormEditor.Form";
 
-		private const string FormSubmittedCookieKey = "_fe";
-
 		private IEnumerable<Page> _pages;
 		private IEnumerable<Row> _rows;
+		private IMaxSubmissionsForCurrentUserHandler _maxSubmissionsForCurrentUserHandler;
 
 		#region Properties configured in the form editor
 
@@ -90,6 +90,7 @@ namespace FormEditor
 		// events
 		public static event FormEditorCancelEventHandler BeforeAddToIndex;
 		public static event FormEditorEventHandler AfterAddToIndex;
+		public static event FormEditorMailCancelEventHandler BeforeSendMail;
 
 		public bool CollectSubmittedValues(bool redirect = true)
 		{
@@ -171,16 +172,16 @@ namespace FormEditor
 			}
 
 			// before add to index event handling did not cancel - add to index
-			var rowId = AddSubmittedValuesToIndex(content, valueFields);
-			if(rowId == Guid.Empty)
+			RowId = AddSubmittedValuesToIndex(content, valueFields);
+			if(RowId == Guid.Empty)
 			{
 				return false;
 			}
 
 			// tell everyone that something was added
-			RaiseAfterAddToIndex(rowId, content);
+			RaiseAfterAddToIndex(content);
 
-			SetFormSubmittedCookie(content);
+			MaxSubmissionsForCurrentUserHandler.HandleSubmission(this, content);
 
 			SendEmails(content, valueFields);
 
@@ -277,12 +278,7 @@ namespace FormEditor
 
 		public bool MaxSubmissionsExceededForCurrentUser(IPublishedContent content)
 		{
-			if (DisallowMultipleSubmissionsPerUser == false)
-			{
-				return false;
-			}
-			var cookie = Request.Cookies[FormSubmittedCookieKey];
-			return cookie != null && cookie.Value.Contains(FormSubmittedCookieValue(content));
+			return MaxSubmissionsForCurrentUserHandler.CanSubmit(this, content) == false;
 		}
 
 		public bool MaxSubmissionsExceeded()
@@ -374,6 +370,19 @@ namespace FormEditor
 				}
 				return Context.PublishedContentRequest.PublishedContent;
 			}
+		}
+
+		public IMaxSubmissionsForCurrentUserHandler MaxSubmissionsForCurrentUserHandler
+		{
+			get
+			{
+				if(_maxSubmissionsForCurrentUserHandler == null)
+				{
+					_maxSubmissionsForCurrentUserHandler = LimitationsHelper.GetMaxSubmissionsForCurrentUserHandler();
+				}
+				return _maxSubmissionsForCurrentUserHandler;
+			}
+			set { _maxSubmissionsForCurrentUserHandler = value; }
 		}
 
 		#region Stuff for backwards compatibility with v0.10.0.2 (before introducing form pages) - should probably be removed at some point
@@ -539,13 +548,13 @@ namespace FormEditor
 			return null;
 		}
 
-		private void RaiseAfterAddToIndex(Guid rowId, IPublishedContent content)
+		private void RaiseAfterAddToIndex(IPublishedContent content)
 		{
 			if(AfterAddToIndex != null)
 			{
 				try
 				{
-					AfterAddToIndex.Invoke(this, new FormEditorEventArgs(rowId, content));
+					AfterAddToIndex.Invoke(this, new FormEditorEventArgs(RowId, content));
 				}
 				catch(Exception ex)
 				{
@@ -641,10 +650,10 @@ namespace FormEditor
 			subject = InterpolateSubmittedValues(subject);
 
 			// send emails to the recipients
-			SendEmails(subject, emailBody, senderEmailAddress, addresses, uploadedFiles);
+			SendEmails(subject, emailBody, senderEmailAddress, addresses, uploadedFiles, emailType);
 		}
 
-		private static void SendEmails(string subject, string body, MailAddress from, IEnumerable<MailAddress> to, HttpPostedFile[] uploadedFiles)
+		private void SendEmails(string subject, string body, MailAddress from, IEnumerable<MailAddress> to, HttpPostedFile[] uploadedFiles, string emailType)
 		{
 			if(string.IsNullOrEmpty(body))
 			{
@@ -674,8 +683,30 @@ namespace FormEditor
 					ContentType = file.ContentType,
 					Bytes = new byte[file.ContentLength]
 				};
+				// #86 - make sure we start reading files at their origin (in case a custom index has been tampering with them)
+				file.InputStream.Seek(0, SeekOrigin.Begin);
 				file.InputStream.Read(attachment.Bytes, 0, file.ContentLength);
 				attachments.Add(attachment);
+			}
+
+			// #23 - raise an event before sending the mail
+			if(BeforeSendMail != null)
+			{
+				try
+				{
+					var cancelEventArgs = new FormEditorMailCancelEventArgs(mail, emailType.ToLowerInvariant());
+					BeforeSendMail.Invoke(this, cancelEventArgs);
+					if(cancelEventArgs.Cancel)
+					{
+						Log.Info("The {0} email was not sent because an event handler for BeforeSendMail cancelled the mail delivery.", emailType);
+						return;
+					}
+				}
+				catch (Exception ex)
+				{
+					// an event handler failed - log error and continue
+					Log.Error(ex, "An event handler for BeforeSendMail threw an exception.");
+				}
 			}
 
 			// send the mail as fire-and-forget (pass the attachments as state)
@@ -687,8 +718,10 @@ namespace FormEditor
 				}
 				try
 				{
-					var client = new SmtpClient();
-					client.Send(mail);
+					using(var client = new SmtpClient())
+					{
+						client.Send(mail);
+					}
 				}
 				catch(Exception ex)
 				{
@@ -802,45 +835,6 @@ namespace FormEditor
 					? field.SubmittedValueForEmail()
 					: string.Empty;
 			});
-		}
-
-		private void SetFormSubmittedCookie(IPublishedContent content)
-		{
-			var cookieValue = (Request.Cookies.AllKeys.Contains(FormSubmittedCookieKey) ? Request.Cookies[FormSubmittedCookieKey].Value : null) ?? string.Empty;
-			var containsCurrentContent = cookieValue.Contains(FormSubmittedCookieValue(content));
-
-			if (DisallowMultipleSubmissionsPerUser == false)
-			{
-				if (containsCurrentContent)
-				{
-					// "only one submission per user" must've been enabled for this form at some point - explicitly remove the content ID from the cookie
-					cookieValue = cookieValue.Replace(FormSubmittedCookieValue(content), ",");
-					if (cookieValue == ",")
-					{
-						// this was the last content ID - remove the cookie 
-						Response.Cookies.Add(new HttpCookie(FormSubmittedCookieKey, cookieValue) { Expires = DateTime.Today.AddDays(-1) });
-					}
-					else
-					{
-						// update the cookie value
-						Response.Cookies.Add(new HttpCookie(FormSubmittedCookieKey, cookieValue) { Expires = DateTime.Today.AddDays(30) });						
-					}
-				}
-
-				return;
-			}
-
-			// add the content ID to the cookie value if it's not there already
-			if (containsCurrentContent == false)
-			{
-				cookieValue = string.Format("{0}{1}", cookieValue.TrimEnd(','), FormSubmittedCookieValue(content));
-			}
-			Response.Cookies.Add(new HttpCookie(FormSubmittedCookieKey, cookieValue) { Expires = DateTime.Today.AddDays(30) });
-		}
-
-		private static string FormSubmittedCookieValue(IPublishedContent content)
-		{
-			return string.Format(",{0},", content.Id);
 		}
 
 		#endregion

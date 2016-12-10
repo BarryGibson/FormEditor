@@ -29,12 +29,6 @@
                view: "~/App_Plugins/FormEditor/config/fieldTypeGroups.html"
             },
             {
-               label: "Disallowed field types",
-               description: "Select all fields types that should not be allowed to use",
-               key: "disallowedFieldTypes",
-               view: "~/App_Plugins/FormEditor/config/disallowedFieldTypes.html"
-            },
-            {
                label: "Notification email template",
                description: "Leave empty to disable notification emails",
                key: "notificationEmailTemplate",
@@ -92,6 +86,12 @@
                label: "Use form statistics",
                description: "Enable statistics for form submissions",
                key: "enableStatistics",
+               view: "boolean"
+            },
+            {
+               label: "Enable field cloning",
+               description: "Make it possible to clone the fields in the form",
+               key: "enableFieldCloning",
                view: "boolean"
             },
             {

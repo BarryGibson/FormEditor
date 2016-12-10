@@ -13,6 +13,8 @@
     $scope.model.enableValidation = $scope.model.config.disableValidation != 1;
     // are multiple form pages enabled?
     $scope.model.enablePages = $scope.model.config.enablePages == 1;
+    // is field cloning enabled?
+    $scope.model.enableFieldCloning = $scope.model.config.enableFieldCloning == 1;
 
     $scope.emailTemplates = { notification: $scope.model.config.notificationEmailTemplate, confirmation: $scope.model.config.confirmationEmailTemplate };
 
@@ -259,15 +261,6 @@
         else {
           // display all fields in one group
           var fieldTypes = $scope.model.config.fieldTypes;
-
-          // TODO: remove this once the obsoleted "disallowed field types" prevalue is removed entirely
-          if ($scope.model.config.disallowedFieldTypes && $scope.model.config.disallowedFieldTypes.length > 0) {
-            // filter out any disallowed field types (as per data type config)
-            fieldTypes = $filter("filter")(fieldTypes, function (value, index, array) {
-              return $scope.model.config.disallowedFieldTypes.indexOf(value.type) < 0;
-            });
-          }
-
           var fieldTypeGroup = {
             name: null,
             fieldTypes: []
@@ -343,6 +336,25 @@
         callback: function (field) {
         }
       });
+    }
+
+    $scope.cloneField = function (field, cell) {
+      var newField = angular.copy(field);
+      if (field.isValueField) {
+        // remove any existing " (xxx)" name postfix from the previous cloning, when cloning an already cloned field
+        var fieldName = field.name.replace(/\s\(\d*\)$/, "");
+        var newNameCounter = 1;
+        while (_.find($scope.allValueFields(),
+            function (f) {
+              return f.name == fieldName + " (" + newNameCounter + ")";
+            }) !=
+          null) {
+          newNameCounter++;
+        }
+        newField.name = fieldName + " (" + newNameCounter + ")";
+      }
+      cell.fields.push(newField);
+      $scope.clearFieldCache();
     }
 
     $scope.removeField = function (field, cell) {
