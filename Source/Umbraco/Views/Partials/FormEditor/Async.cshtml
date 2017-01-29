@@ -10,16 +10,23 @@
   // get the name of the form model property on the content type (defaults to "form")
   var formPropertyName = ViewBag.FormName as string ?? "form";
 
-  // get the form model (named "form" on the content type)
+  // get the form model
   var form = formContent.GetPropertyValue<FormModel>(formPropertyName);
+
+  // #104 - don't attempt to render the form if the form model does not exist on the page or if it is empty
+  if(form == null || form.IsEmpty())
+  {
+    @: <!-- no Form Editor form was found on the page -->
+    return;
+  }
 
   // attempt to load an existing submission if ViewBag.FormRowId is defined
   if(ViewBag.FormRowId is string)
   {
     Guid rowId;
-    if(Guid.TryParse((string) ViewBag.FormRowId, out rowId))
+    if(Guid.TryParse((string)ViewBag.FormRowId, out rowId))
     {
-      form.LoadValues(formContent, rowId);      
+      form.LoadValues(formContent, rowId);
     }
   }
 
@@ -90,13 +97,13 @@
       }
       @*
         form validation errors container (for cross field validations)
-        TIP: you can localize the header text by adding "form.validationerrors.header" to the Umbraco dictionary
+        TIP: you can localize the default header text by adding "form.validationerrors.header" to the Umbraco dictionary
       *@<div id="validationErrors" class="row form-validation-errors" ng-show="invalidValidations.length > 0">
         <div class="cell">
           <div class="form-group">
             <div class="alert alert-danger">
               <h4>
-                @Umbraco.Coalesce(Umbraco.GetDictionaryValue("form.validationerrors.header"), "The form contains errors")
+                @Umbraco.Coalesce(form.ValidationsHeader, Umbraco.GetDictionaryValue("form.validationerrors.header"), "The form contains errors")
               </h4>
               <ul id="validationErrorsList">
                 <li ng-repeat="validation in invalidValidations">{{validation.errorMessage}}</li>
@@ -127,6 +134,9 @@
 
       @* form validations as an array of JSON objects *@
       _fe[@formContent.Id].validations = @form.Validations.Render();
+
+      @* form actions as an array of JSON objects *@
+      _fe[@formContent.Id].actions = @form.Actions.Render();
 
       @* the total number of form pages *@
       _fe[@formContent.Id].totalPages = @form.Pages.Count();
