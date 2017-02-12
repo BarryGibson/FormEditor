@@ -24,7 +24,7 @@ namespace FormEditor.Fields
 
 			var submittedFieldValues = ExtractSubmittedValues();
 			FieldValues.ToList().ForEach(f => f.Selected = submittedFieldValues.Contains(f.Value));
-
+			
 			// make sure all submitted values are actually defined as a field value (maybe some schmuck tampered with the options client side)
 			if (submittedFieldValues.Any())
 			{

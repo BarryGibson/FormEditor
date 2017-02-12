@@ -63,9 +63,16 @@ namespace FormEditor.Fields
 				return null;
 			}
 			DateTime date;
-			return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date)
+			if (value.Contains("-"))
+			{
+				return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out date)
 				? date.ToUniversalTime().ToString("yyyy-MM-dd")
 				: null;
+			}
+			else
+				return DateTime.TryParseExact(value, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out date)
+					? date.ToString("yyyy-MM-dd")
+					: null;
 		}
 
 		// NOTE: 
