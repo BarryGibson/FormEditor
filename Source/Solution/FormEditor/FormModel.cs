@@ -11,9 +11,11 @@ using FormEditor.Data;
 using FormEditor.Events;
 using FormEditor.Fields;
 using FormEditor.Fields.Statistics;
+using FormEditor.Integrations;
 using FormEditor.Limitations;
 using FormEditor.Storage;
 using FormEditor.Storage.Statistics;
+using Newtonsoft.Json;
 using Umbraco.Core.Models;
 using Umbraco.Web;
 using Field = FormEditor.Fields.Field;
@@ -83,9 +85,9 @@ namespace FormEditor
 		private string EmailConfirmationTemplate { get; set; }
 		private bool LogIp { get; set; }
 		private bool StripHtml { get; set; }
-		// TODO: remove this in an upcoming release (obsolete)
-		private bool DisableValidation { get; set; }
 		private bool UseStatistics { get; set; }
+		private WebServiceConfiguration WebServiceConfiguration { get; set; }
+		private string[] VisibleTabs { get; set; }
 
 		#endregion
 
@@ -151,7 +153,7 @@ namespace FormEditor
 			var valueFields = AllValueFields().ToList();
 
 			// next execute all validations (if validation is enabled)
-			if(DisableValidation == false && ExecuteValidations(content, valueFields) == false)
+			if(IsVisibleTab(TabOrder.Ids.Validation) && ExecuteValidations(content, valueFields) == false)
 			{
 				return false;
 			}
@@ -180,8 +182,10 @@ namespace FormEditor
 				return false;
 			}
 
+			SubmitToWebService(content);
+
 			// tell everyone that something was added
-			RaiseAfterAddToIndex(content);
+			RaiseAfterAddToIndex(content, fields);
 
 			MaxSubmissionsForCurrentUserHandler.HandleSubmission(this, content);
 
@@ -519,7 +523,7 @@ namespace FormEditor
 
 			return index.Add(indexFields, indexRowId);			
 		}
-		
+
 		private string FormatForIndexAndSanitize(FieldWithValue field, IPublishedContent content, Guid rowId)
 		{
 			var value = field.FormatSubmittedValueForIndex(content, rowId);
@@ -555,8 +559,13 @@ namespace FormEditor
 			return null;
 		}
 
-		private void RaiseAfterAddToIndex(IPublishedContent content)
+		private void RaiseAfterAddToIndex(IPublishedContent content, List<Field> fields)
 		{
+			foreach(var field in fields)
+			{
+				field.AfterAddToIndex(fields, content);
+			}
+
 			if(AfterAddToIndex != null)
 			{
 				try
@@ -757,50 +766,6 @@ namespace FormEditor
 			return addresses;
 		}
 
-		private void LoadPreValues(IPublishedContent content)
-		{
-			try
-			{
-				if(content == null)
-				{
-					return;
-				}
-				var property = content.ContentType.PropertyTypes.FirstOrDefault(p => p.PropertyEditorAlias == PropertyEditorAlias);
-				if(property == null)
-				{
-					return;
-				}
-				var preValues = Context.Application.Services.DataTypeService.GetPreValuesCollectionByDataTypeId(property.DataTypeId);
-				if(preValues == null)
-				{
-					return;
-				}
-				var preValueDictionary = preValues.PreValuesAsDictionary;
-				EmailNotificationTemplate = GetPreValue("notificationEmailTemplate", preValueDictionary);
-				EmailConfirmationTemplate = GetPreValue("confirmationEmailTemplate", preValueDictionary);
-				LogIp = GetPreValueAsBoolean("logIp", preValueDictionary);
-				StripHtml = GetPreValueAsBoolean("stripHtml", preValueDictionary);
-				DisableValidation = GetPreValueAsBoolean("disableValidation", preValueDictionary);
-				UseStatistics = GetPreValueAsBoolean("enableStatistics", preValueDictionary);
-			}
-			catch(Exception ex)
-			{
-				Log.Error(ex, "Could not load prevalues for property editor, see exception for details.");
-			}
-		}
-
-		private static string GetPreValue(string key, IDictionary<string, PreValue> preValueDictionary)
-		{
-			return preValueDictionary.ContainsKey(key) && preValueDictionary[key] != null
-				? preValueDictionary[key].Value
-				: null;
-		}
-
-		private static bool GetPreValueAsBoolean(string key, IDictionary<string, PreValue> preValueDictionary)
-		{
-			return GetPreValue(key, preValueDictionary) == "1";
-		}
-
 		private void RedirectToSuccesPage()
 		{
 			var helper = new UmbracoHelper(Context);
@@ -844,6 +809,99 @@ namespace FormEditor
 			});
 		}
 
+		private void SubmitToWebService(IPublishedContent content)
+		{
+			if(WebServiceConfiguration != null)
+			{
+				try
+				{
+					var webService = new WebService(WebServiceConfiguration);
+					webService.Submit(this, content);
+				}
+				catch(Exception ex)
+				{
+					Log.Error(ex, "Could not submit form data to the web service - see exception for details.");
+				}
+			}
+		}
+
+		#endregion
+
+		#region PreValue handling
+
+		private void LoadPreValues(IPublishedContent content)
+		{
+			try
+			{
+				if(content == null)
+				{
+					return;
+				}
+				var property = content.ContentType.PropertyTypes.FirstOrDefault(p => p.PropertyEditorAlias == PropertyEditorAlias);
+				if(property == null)
+				{
+					return;
+				}
+				var preValues = Context.Application.Services.DataTypeService.GetPreValuesCollectionByDataTypeId(property.DataTypeId);
+				if(preValues == null)
+				{
+					return;
+				}
+				var preValueDictionary = preValues.PreValuesAsDictionary;
+				EmailNotificationTemplate = GetPreValue("notificationEmailTemplate", preValueDictionary);
+				EmailConfirmationTemplate = GetPreValue("confirmationEmailTemplate", preValueDictionary);
+				LogIp = GetPreValueAsBoolean("logIp", preValueDictionary);
+				StripHtml = GetPreValueAsBoolean("stripHtml", preValueDictionary);
+				UseStatistics = GetPreValueAsBoolean("enableStatistics", preValueDictionary);
+				WebServiceConfiguration = GetPreValueFromJson<WebServiceConfiguration>("webService", preValueDictionary);
+				VisibleTabs = (GetPreValueFromJson<TabOrder[]>("tabOrder", preValueDictionary) ?? new TabOrder[0])
+					.Where(t => t.Visible).Select(t => t.Id).ToArray();
+			}
+			catch(Exception ex)
+			{
+				Log.Error(ex, "Could not load prevalues for property editor, see exception for details.");
+			}
+		}
+
+		private static string GetPreValue(string key, IDictionary<string, PreValue> preValueDictionary)
+		{
+			return preValueDictionary.ContainsKey(key) && preValueDictionary[key] != null
+				? preValueDictionary[key].Value
+				: null;
+		}
+
+		private static bool GetPreValueAsBoolean(string key, IDictionary<string, PreValue> preValueDictionary)
+		{
+			return GetPreValue(key, preValueDictionary) == "1";
+		}
+
+		private static T GetPreValueFromJson<T>(string key, IDictionary<string, PreValue> preValueDictionary) where T : class
+		{
+			var value = GetPreValue(key, preValueDictionary);
+			if(string.IsNullOrEmpty(value))
+			{
+				return null;
+			}
+			return JsonConvert.DeserializeObject<T>(value);
+		}
+
+		private class TabOrder
+		{
+			public static class Ids
+			{
+				public const string Validation = "validation";
+			}
+
+			public string Id { get; set; }
+
+			public bool Visible { get; set; }
+		}
+
+		private bool IsVisibleTab(string id)
+		{
+			return VisibleTabs != null && VisibleTabs.Contains(id, StringComparer.OrdinalIgnoreCase);
+		}
+
 		#endregion
 
 		#region Get submitted values
@@ -864,12 +922,13 @@ namespace FormEditor
 
 		private static Data.Field ToDataField(Func<FieldWithValue, string, Storage.Row, string> valueFormatter, FieldWithValue field, Storage.Row row)
 		{
+			var fieldValue = FieldHelper.GetSubmittedValue(field, row.Fields);
 			return new Data.Field
 			{
 				Name = field.Name,
 				FormSafeName = field.FormSafeName,
 				Type = field.Type,
-				Value = valueFormatter != null ? valueFormatter(field, row.Fields.ContainsKey(field.FormSafeName) ? row.Fields[field.FormSafeName] : null, row) : null
+				Value = valueFormatter != null ? valueFormatter(field, fieldValue, row) : null
 			};
 		}
 

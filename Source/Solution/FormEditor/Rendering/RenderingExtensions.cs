@@ -33,7 +33,9 @@ namespace FormEditor.Rendering
 			return rules.Select(r => new RuleData
 			{
 				Field = ToFieldData(r.Field),
-				Condition = r.Condition.ForFrontEnd()
+				Condition = r.Condition != null 
+					? r.Condition.ForFrontEnd()
+					: new ConditionData()
 			}).ToList();
 		}
 
@@ -68,7 +70,9 @@ namespace FormEditor.Rendering
 
 		public static List<FieldData> ForFrontEnd(this IEnumerable<FieldWithValue> fields)
 		{
-			return fields.Select(ToFieldData).ToList();
+			return fields != null 
+				? fields.Select(ToFieldData).ToList()
+				: new List<FieldData>();
 		}
 
 		public static IHtmlString Render(this IEnumerable<FieldWithValue> fields)
@@ -80,7 +84,7 @@ namespace FormEditor.Rendering
 
 		public static bool HasDefaultValue(this FieldWithValue field)
 		{
-			if(field is CheckboxField)
+			if(field is IDefaultSelectableField)
 			{
 				return true;
 			}
@@ -94,10 +98,10 @@ namespace FormEditor.Rendering
 
 		public static IHtmlString DefaultValue(this FieldWithValue field)
 		{
-			var checkboxField = field as CheckboxField;
-			if(checkboxField != null)
+			var defaultSelectableField = field as IDefaultSelectableField;
+			if(defaultSelectableField != null)
 			{
-				return new HtmlString(checkboxField.Selected ? "true" : "undefined");
+				return new HtmlString(defaultSelectableField.Selected ? "true" : "undefined");
 			}
 			var fieldWithFieldValues = field as FieldWithFieldValues;
 			if(field.HasSubmittedValue)
@@ -143,13 +147,15 @@ namespace FormEditor.Rendering
 
 		private static FieldData ToFieldData(FieldWithValue f)
 		{
-			return new FieldData
-			{
-				Name = f.Name,
-				FormSafeName = f.FormSafeName,
-				SubmittedValue = f.SubmittedValue,
-				Invalid = f.Invalid
-			};
+			return f != null
+				? new FieldData
+				{
+					Name = f.Name,
+					FormSafeName = f.FormSafeName,
+					SubmittedValue = f.SubmittedValue,
+					Invalid = f.Invalid
+				}
+				: new FieldData();
 		}
 
 		public static JsonSerializerSettings SerializerSettings

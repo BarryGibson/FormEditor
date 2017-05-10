@@ -4,6 +4,8 @@ In this tutorial we'll integrate Form Editor with an email marketing platform, s
 
 [Campaign Monitor](https://www.campaignmonitor.com/) offers an official [.NET wrapper](http://campaignmonitor.github.io/createsend-dotnet/) for their API, which makes it an obvious choice for this tutorial. If you're more of a MailChimp kind of person, there are similar 3rd party .NET wrappers for MailChimp, and it should be pretty straight forward to apply those to the code in this tutorial.
 
+*Note: Since version 0.18, Form Editor features built-in integration with both Campaign Monitor and MailChimp on a per-form basis ([read more](../Docs/fields_newsletter.md)). However, this tutorial still makes sense if you want to add a global handling of newsletter subscription, or if you simply want to learn more about some of the runtime extension points in Form Editor.*
+
 ## What to do
 
 The objective is simple: When a form is submitted, we'll look for a checked "subscribe to newsletter" checkbox and a valid email field. If we can find those, we'll subscribe the email address to our mailing list. Furthermore we'll attempt to dig out additional information about the user (name, gender and zip code) and pass it along with the subscription, for use within Campaign Monitor. 
@@ -18,11 +20,11 @@ When our event handler is invoked, we'll attempt to dig out the relevant form fi
 
 Start by adding the Campaign Monitor .NET wrapper to your project. If you're on the Visual Studio side of things, use the [NuGet](https://www.nuget.org/packages/campaignmonitor-api/) package. If you're not, you can download the NuGet package, extract *createsend-dotnet.dll* ([7zip](http://www.7-zip.org/) can extract NuGet packages), and dump the DLL in the */bin* folder of your site.
 
-![Extracting NuGet package with 7zip](img/EmailMarketing/7zip nuget.png)
+![Extracting NuGet package with 7zip](img/EmailMarketing/7zip-nuget.png)
 
 Next add the event handler implementation from the code listing below (you can put it in the */App_Code* folder of your site if you're not into Visual Studio). You'll need to update the Campaign Monitor API key and mailing list ID in the top of the event handler to match your own Campaign Monitor account and list. If you need help finding these, have a look at the *Integrations and API* category in the *Help* section of your Campaign Monitor dashboard.
 
-![Campaign Monitor settings](img/EmailMarketing/campaign monitor settings.png)
+![Campaign Monitor settings](img/EmailMarketing/campaign-monitor-settings.png)
 
 Here's the full implementation of the event handler.
 
@@ -140,7 +142,7 @@ To test the integration, create a form which contains:
 
 Make sure you tick the "Subscribe" box when you submit the form. Once submitted, hopefully you'll find your email added to your Campaign Monitor list, along with any other information you filled out (if not, check the Umbraco log for any log errors).
 
-![Campaign Monitor subscription](img/EmailMarketing/campaign monitor subscription.png)
+![Campaign Monitor subscription](img/EmailMarketing/campaign-monitor-subscription.png)
 
 ## But wait, I have several mailing lists!
 

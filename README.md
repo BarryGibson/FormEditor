@@ -4,14 +4,16 @@ Form Editor is a free and open source form builder for [Umbraco](http://umbraco.
 
 If you're new to Form Editor, you should probably start by checking out the [Quick start tutorial](Tutorials/QuickStart.md).
 
-![Form Editor UI](Docs/img/form layout.png)
+![Form Editor UI](Docs/img/form-layout.png)
 
 Some highlights include:
 * Grid based form editing.
 * Ships with (almost) all HTML5 input types.
 * Cross field validation.
 * Conditional fields.
-* Support for multi-page forms (optional).
+* Integration with [Campaign Monitor](https://www.campaignmonitor.com/) and [MailChimp](https://mailchimp.com/).
+* Integration with external web services.
+* Support for multi-page forms.
 * Full control over the frontend rendering.
 * Full support for asynchronous postback, e.g. for AngularJS.
 * Easily extendable with custom fields.
@@ -22,13 +24,20 @@ Some highlights include:
 
 ## Table of contents
 * [Installing and setting up Form Editor](Docs/install.md)
+   * [Setting up web service integration](Docs/install_web_service.md)
 * [Rendering the form](Docs/render.md)
 * [Email templates](Docs/emails.md)
 * [Special form fields](Docs/fields.md)
+    * [Campaign Monitor and MailChimp fields](Docs/fields_newsletter.md).
 * [Reusable forms](Docs/reuse.md)
 * [Multiple forms per page](Docs/multiple.md)
 * [Working with the form submissions](Docs/submissions.md)
+   * [Listing form submissions](Docs/submissions_list.md)
+   * [Working with form submission statistics](Docs/submissions_stats.md)
+   * [Editing form submissions](Docs/submissions_edit.md)
 * [Extending Form Editor (custom fields, workflows and more)](Docs/extend.md)
+    * [Creating a custom field](Docs/extend_field.md) 
+    * [Creating a custom condition](Docs/extend_condition.md)
 * [Creating a default form](Docs/initialize.md)
 * [A note about storage](Docs/storage.md)
 * [Building and contributing](Docs/build.md)
@@ -54,6 +63,9 @@ Some highlights include:
     * Topics covered: Rendering, default values.
 * [Configuring a conditional field](Tutorials/ConditionalField.md) - use *Actions* to conditionally show a field.
     * Topics covered: Actions, cross field validation.
+
+## Articles
+* ["Can we add a poll?"](http://24days.in/umbraco-cms/2016/polls-in-umbraco/) - an entry in the 2016 version of 24 Days.
 
 ## Credits
 A huge thank-you goes out to the talented [Yusuke Kamiyamane](http://p.yusukekamiyamane.com/) for creating the Fugue Icons that are used heavily in this project. H5YR!

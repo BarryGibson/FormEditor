@@ -71,12 +71,6 @@
                view: "boolean"
             },
             {
-               label: "Don't use validation",
-               description: "OBSOLETE - use tab order and disable the validation tab instead",
-               key: "disableValidation",
-               view: "boolean"
-            },
-            {
                label: "Use form pages",
                description: "Enable creation of multiple form page",
                key: "enablePages",
@@ -93,6 +87,12 @@
                description: "Make it possible to clone the fields in the form",
                key: "enableFieldCloning",
                view: "boolean"
+            },
+            {
+               label: "Web service integration",
+               description: "Configure integration with an external web service",
+               key: "webService",
+               view: "~/App_Plugins/FormEditor/config/webService.html"
             },
             {
                label: "Custom CSS",

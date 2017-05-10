@@ -3,7 +3,7 @@
 Are you new to Form Editor? No worries, this tutorial was made specifically for you. Just follow these steps and you'll be up and running in no time!
 
 ## Step 1: Install and set up Form Editor
-Go grab the latest version of the Form Editor Umbraco package from the [releases section](https://github.com/kjac/FormEditor/releases) (it's the zip file attached to the release) and install it in the Developer section of Umbraco. 
+Go grab the latest version of the Form Editor Umbraco package from the [latest release](https://github.com/kjac/FormEditor/releases/latest) (it's the zip file attached to the release) and install it in the Developer section of Umbraco. 
 
 *Tip:* You can also install Form Editor from [NuGet](https://www.nuget.org/packages/FormEditor/) if you feel like it.
 
@@ -40,7 +40,7 @@ Of course you'll need to style the form elements too, but that's out of scope fo
 ## Step 4: Profit :)
 Now go build a form on one of your pages and publish it. 
 
-![Form property](img/QuickStart/form property.png)
+![Form property](img/QuickStart/form-property.png)
 
 If everything goes according to plan, you should now have a fully functional form on your page.
 

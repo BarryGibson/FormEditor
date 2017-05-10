@@ -2,14 +2,14 @@
 Form Editor works just like any other property editor for Umbraco, so installation is pretty straight forward. 
 
 ## Installing the package
-First and foremost grab the [latest Form Editor package](https://github.com/kjac/FormEditor/releases) and install it in your Umbraco site.
+First and foremost grab the [Form Editor package](https://github.com/kjac/FormEditor/releases/latest) from the latest release (it's the zip file attached to the release) and install it in the Developer section of your Umbraco site.
 
 Or, if you're using NuGet, you can install the [Form Editor](https://www.nuget.org/packages/FormEditor/) NuGet package. 
 
 ## Setting up the data types
 Once the package is installed, go ahead and create a Form Editor data type. 
 
-![Form Editor data types](img/data types.png)
+![Form Editor data types](img/data-types.png)
 
 ### Configuring the Form Editor data type
 
@@ -21,7 +21,7 @@ In the "Row layouts" section of the configuration you'll set up the row layouts 
     * An **alias**, so you can identify the cell when rendering the form. 
     * The **width** of the cell (in percent of the total row width) when rendered in the Form Editor. Within a row layout, the sum of all cell widths must equal 100.
 
-![Form Editor row layouts](img/row layouts.png)
+![Form Editor row layouts](img/row-layouts.png)
 
 Form Editor ships with a bunch of row icons, but if you run out of icons you can add more simply by dumping them in */App_Plugins/FormEditor/editor/rows/*.
 
@@ -39,6 +39,9 @@ You can choose separate email templates for notification and confirmation emails
 
 ##### Tab order and availiability
 There are a lot of options with Form Editor, some of which you might not use or want your editors to be concerned with. These options are grouped in tabs within the property editor. You can decide the order of these tabs as well as disable the tabs you don't want available to your editors.
+
+##### Web service integration
+Form Editor can send form data automatically to an external web service upon a successful form submission. Read more about this [here](install_web_service.md).
 
 ##### Custom CSS
 If you feel the need to style Form Editor differently, specify the path to your custom style sheet here and it will be loaded whenever a Form Editor property loads. The path must be from the root of your site.

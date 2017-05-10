@@ -1,12 +1,12 @@
 # User ratings with Form Editor
 Ever needed to add end user ratings to some Umbraco content?
 
-![Rating and review](img/Ratings/review form.png)
+![Rating and review](img/Ratings/review-form.png)
 
 Form Editor makes this simple to achieve using nothing but built-in functionality, thanks to the form submission statistics feature. In this tutorial we'll create a rating system that allows the end users to rate and review articles.
 
 ## Set up Umbraco
-Start with a blank Umbraco installation and install the [latest Form Editor package](https://github.com/kjac/FormEditor/releases) (it's the zip file attached to the release). 
+Start with a blank Umbraco installation and install the [latest Form Editor package](https://github.com/kjac/FormEditor/releases/latest) (it's the zip file attached to the release). 
 
 Once the package is installed, create a Form Editor data type. There's no need to make a whole lot of changes to the default data type configuration, but at the very least you must check the "Use form statistics" box.
 
@@ -24,7 +24,7 @@ Create an *Article* page in the Content section and add some content to it. Now 
 2. A mandatory *Text area* field named *Review*.
 3. A *Submit button* field.
 
-![Rating and review](img/Ratings/review form property.png)
+![Rating and review](img/Ratings/review-form-property.png)
 
 ## Rendering the article 
 When rendering the article we need to calculate its average rating based on all the submitted ratings. We can do that by using [form submission statistics](../Docs/submissions.md#how-about-statistics), since the *Radio button group* field type supports statistics out of the box.
