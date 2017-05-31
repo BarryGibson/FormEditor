@@ -1,15 +1,16 @@
 <div class="umb-panel form-editor-edit-field" ng-controller="FormEditor.Editor.FieldController">
-  <div class="umb-panel-body no-header with-footer umb-scrollable" ng-init="dialogData.field.multiSelect = true">
+  <div class="umb-panel-body no-header with-footer umb-scrollable">
     <div class="umb-control-group">
       <div class="tab-content form umb-el-wrap">
         <form-editor-field-header></form-editor-field-header>
 
         <div class="umb-pane">
-          <form-editor-field-basics></form-editor-field-basics>
+          <label class="control-label" for="text">
+            <form-editor-localize key="edit.submitButton.label">Button text</form-editor-localize>
+            <small form-editor-localize key="edit.submitButton.label.helpText">The text displayed on the button - e.g. "Save" or "Send"</small>
+          </label>
+          <input type="text" id="text" autofocus ng-model="dialogData.field.text" />
 
-          <form-editor-field-options option-selected-text-key="edit.checked" option-selected-text-default="Checked" multi-value-field="true"></form-editor-field-options>
-
-          <form-editor-field-mandatory></form-editor-field-mandatory>
           <form-editor-field-error-message></form-editor-field-error-message>
         </div>
       </div>
