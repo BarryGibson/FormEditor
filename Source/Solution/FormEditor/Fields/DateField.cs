@@ -70,7 +70,7 @@ namespace FormEditor.Fields
 				: null;
 			}
 			else
-				return DateTime.TryParseExact(value, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out date)
+				return DateTime.TryParseExact(value, "d/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out date)
 					? date.ToString("yyyy-MM-dd")
 					: null;
 		}

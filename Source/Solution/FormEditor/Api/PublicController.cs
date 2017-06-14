@@ -97,6 +97,55 @@ namespace FormEditor.Api
 			return SubmissionSuccessResponse(successData);
 		}
 
+		[HttpPost]
+		public HttpResponseMessage CancelEntry()
+		{
+			int id;
+			if (int.TryParse(HttpContext.Current.Request.Form["_id"], out id) == false)
+			{
+				return ValidationErrorResponse("Could not find _id in the request data");
+			}
+			var rowId = Guid.Empty;
+			Guid.TryParse(HttpContext.Current.Request.Form["_rowId"], out rowId);
+			var content = Umbraco.TypedContent(id);
+			if (content == null)
+			{
+				return ValidationErrorResponse("Could not any content with id {0}", id);
+			}
+			var property = content.ContentType.PropertyTypes.FirstOrDefault(p => p.PropertyEditorAlias == FormModel.PropertyEditorAlias);
+			if (property == null)
+			{
+				return ValidationErrorResponse("Could not find any form property on content with id {0}", id);
+			}
+			FormModel formModel = null;
+			try
+			{
+				formModel = content.GetPropertyValue<FormModel>(property.PropertyTypeAlias);
+			}
+			catch (Exception ex)
+			{
+				return ValidationErrorResponse("Could not extract the form property on content with id {0}: {1}", id, ex.Message);
+			}
+			if (rowId != Guid.Empty)
+			{
+				formModel.LoadValues(content, rowId);
+			}
+			var successData = new SubmissionSuccessData(formModel.RowId);
+			if (formModel.SuccessPageId <= 0)
+			{
+				return SubmissionSuccessResponse(successData);
+			}
+
+			var successPage = Umbraco.TypedContent(formModel.SuccessPageId);
+			if (successPage == null || !Umbraco.MemberHasAccess(successPage.Path))
+			{
+				return SubmissionSuccessResponse(successData);
+			}
+
+			successData.RedirectUrl = Umbraco.NiceUrl(formModel.SuccessPageId);
+			successData.RedirectUrlWithDomain = Umbraco.NiceUrlWithDomain(formModel.SuccessPageId);
+			return SubmissionSuccessResponse(successData);
+		}
 		private HttpResponseMessage SubmissionSuccessResponse(SubmissionSuccessData successData)
 		{
 			return Request.CreateResponse(HttpStatusCode.OK, successData, GetFormatter());
