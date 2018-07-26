@@ -16,6 +16,8 @@ namespace FormEditor.Api
 	[PluginController("FormEditorApi")]
 	public class DownloadController : UmbracoAuthorizedApiController
 	{
+		//temporarily allow anon 
+		[AllowAnonymous]
 		[HttpGet]
 		public HttpResponseMessage DownloadFile(int id, Guid rowId, string fieldName)
 		{

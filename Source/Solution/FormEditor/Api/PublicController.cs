@@ -44,11 +44,11 @@ namespace FormEditor.Api
 				Thread.CurrentThread.CurrentCulture = culture;
 				Thread.CurrentThread.CurrentUICulture = culture;
 			}
-
-			if (Umbraco.MemberHasAccess(content.Path) == false)
-			{
-				return Request.CreateUserNoAccessResponse();
-			}
+			//TODO: fix work around to allow non logged in users to submit forms in nested forms 
+			//if (Umbraco.MemberHasAccess(content.Path) == false)
+			//{
+			//	return Request.CreateUserNoAccessResponse();
+			//}
 
 			var property = content.ContentType.PropertyTypes.FirstOrDefault(p => p.PropertyEditorAlias == FormModel.PropertyEditorAlias);
 			if (property == null)
