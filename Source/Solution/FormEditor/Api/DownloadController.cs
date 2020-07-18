@@ -125,7 +125,7 @@ namespace FormEditor.Api
 			response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
 			response.Content.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
 			{
-				FileName = string.Format(@"Form data {0}.csv", DateTime.Now.ToString("yyyy-MM-dd HH:mm"))
+				FileName = string.Format(@"Form data {0}.csv", DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm"))
 			};
 			return response;
 		}

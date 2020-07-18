@@ -905,8 +905,13 @@ namespace FormEditor
 		#endregion
 
 		#region Get submitted values
+		public IEnumerable<Data.Row> ExtractSubmittedValues(Result result, IPublishedContent content)
+		{
+			var fields = AllValueFields();
+			return ExtractSubmittedValues(result, fields, (field, value, row) => value == null ? null : field.FormatValueForFrontend(value, content, row.Id));
 
-		internal IEnumerable<Data.Row> ExtractSubmittedValues(Result result, IEnumerable<FieldWithValue> fields, Func<FieldWithValue, string, Storage.Row, string> valueFormatter)
+		}
+		public IEnumerable<Data.Row> ExtractSubmittedValues(Result result, IEnumerable<FieldWithValue> fields, Func<FieldWithValue, string, Storage.Row, string> valueFormatter)
 		{
 			return result.Rows.Select(r =>
 				new Data.Row

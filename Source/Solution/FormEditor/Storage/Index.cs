@@ -40,7 +40,7 @@ namespace FormEditor.Storage
 
 		public Guid Add(Dictionary<string, string> fields, Dictionary<string, IEnumerable<string>> fieldsValuesForStatistics, Guid rowId)
 		{
-			var created = DateTime.Now;
+			var created = DateTime.UtcNow;
 			return Add(fields, fieldsValuesForStatistics, rowId, created, created);
 		}
 
@@ -106,7 +106,7 @@ namespace FormEditor.Storage
 
 			var writer = GetIndexWriter();
 			Remove(new[] {rowId}, writer);
-			Add(fields, fieldsValuesForStatistics, rowId, created, DateTime.Now, writer);
+			Add(fields, fieldsValuesForStatistics, rowId, created, DateTime.UtcNow, writer);
 			writer.Close();
 
 			return rowId;
